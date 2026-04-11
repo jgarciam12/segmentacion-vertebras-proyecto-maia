@@ -1,3 +1,8 @@
 .idea
 data/images
 data/masks
+venv/
+
+# Model weights
+*.pth
+__pycache__/
