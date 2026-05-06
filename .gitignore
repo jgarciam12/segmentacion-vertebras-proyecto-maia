@@ -13,6 +13,6 @@ __pycache__/
 .claude/
 
 # Data
-MaIA_Scoliosis_Dataset/
+Scoliosis_Dataset/
 data/images/
 data/masks/
