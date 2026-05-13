@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+
+torch==2.7.0+cpu
+torchvision==0.22.0+cpu
+
+segmentation-models-pytorch
+
+numpy
+opencv-python-headless
+pillow
+python-multipart
+
+albumentations
