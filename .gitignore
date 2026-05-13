@@ -1,11 +1,11 @@
-<<<<<<< HEAD
+
 .venv/
 venv/
 env/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-=======
+
 .idea
 data/images
 data/masks
@@ -14,7 +14,7 @@ venv/
 # Model weights
 *.pth
 __pycache__/
->>>>>>> api-y-front
+
 
 # Data
 MaIA_Scoliosis_Dataset/
