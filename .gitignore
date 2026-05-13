@@ -15,3 +15,8 @@ venv/
 *.pth
 __pycache__/
 >>>>>>> api-y-front
+
+# Data
+MaIA_Scoliosis_Dataset/
+data/images/
+data/masks/
