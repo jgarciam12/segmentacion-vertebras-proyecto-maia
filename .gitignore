@@ -14,7 +14,8 @@ venv/
 # Model weights
 *.pth
 __pycache__/
-
+src/models/
+*.pt
 
 # Data
 MaIA_Scoliosis_Dataset/

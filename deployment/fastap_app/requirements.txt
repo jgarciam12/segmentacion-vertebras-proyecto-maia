@@ -12,3 +12,5 @@ pillow
 python-multipart
 
 albumentations
+git+https://github.com/facebookresearch/segment-anything.git
+ultralytics
