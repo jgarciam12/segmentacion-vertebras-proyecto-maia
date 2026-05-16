@@ -13,7 +13,7 @@ class Predictor:
         print(f"⌛ Iniciando Pipeline Híbrido (YOLO + MedSAM) en {self.device}...")
 
         # --- 1. CARGAR YOLO ---
-        yolo_path = "src/models/yolov8m_B_filtrado_best.pt" 
+        yolo_path = "src/models/yolov8_vertebra_detect.pt" 
         if os.path.exists(yolo_path):
             self.yolo = YOLO(yolo_path)
             print(f"👁️ YOLOv8 cargado exitosamente.")
@@ -50,7 +50,9 @@ class Predictor:
         # Lienzo base transparente
         final_colored_mask = np.zeros((h_orig, w_orig, 4), dtype=np.uint8)
 
-        results = self.yolo(img_rgb, verbose=False)
+        # conf=0.35 -> Ignora detecciones con menos del 35% de seguridad
+        # iou=0.45 -> Si dos cajas se superponen más del 45%, elimina la más débil
+        results = self.yolo(img_rgb, conf=0.35, iou=0.45, verbose=False)
         
         # --- PRE-PROCESAMIENTO: Recolectar y Ordenar Detecciones de YOLO ---
         detecciones_validas = []
