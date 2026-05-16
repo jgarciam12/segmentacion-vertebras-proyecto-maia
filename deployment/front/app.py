@@ -60,7 +60,6 @@ st.markdown(
 
 with st.sidebar:
     # Ajuste de ruta del logo para compatibilidad total
-    # Intenta ruta en Docker (/opt/...) y ruta local
     logo_posibles_rutas = [
         os.path.join("deployment", "front", "logo.png"),
         "logo.png"
@@ -98,8 +97,8 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### ℹ️ Información")
-    st.write("- **Modelo:** UNet ResNet34")
-    st.write("- **Framework:** PyTorch")
+    st.write("- **Modelo:** Pipeline Híbrido (YOLOv8 + MedSAM)")
+    st.write("- **Framework:** PyTorch & Ultralytics")
     st.write("- **Backend:** FastAPI")
 
 # -------------------------------------------------
@@ -132,43 +131,48 @@ if uploaded_file is not None:
 
         start_time = time.time()
 
-        with st.spinner("Procesando imagen con IA..."):
+        with st.spinner("Procesando imagen con IA (Puede tardar un poco en CPU)..."):
 
             try:
                 files = {
                     "file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)
                 }
 
-                response = requests.post(api_url, files=files, timeout=30)
+                # Aumentamos el timeout a 60 segundos por si MedSAM y YOLO tardan
+                response = requests.post(api_url, files=files, timeout=60)
 
                 if response.status_code == 200:
 
-                    mask_image = Image.open(
-                        io.BytesIO(response.content)
-                    ).convert("L")
-
-                    with col2:
-                        st.markdown("### Máscara Segmentada")
-                        st.image(mask_image, use_container_width=True)
-
-                    # --- OVERLAY ---
-                    original_np = np.array(image)
-                    mask_np = np.array(mask_image)
+                    # 1. Leer como imagen con color y transparencia (RGBA)
+                    mask_image = Image.open(io.BytesIO(response.content)).convert("RGBA")
 
                     # Si la máscara no tiene el mismo tamaño, la redimensionamos
-                    if mask_np.shape != original_np.shape[:2]:
-                        mask_image_res = mask_image.resize(image.size)
-                        mask_np = np.array(mask_image_res)
+                    if mask_image.size != image.size:
+                        mask_image = mask_image.resize(image.size, Image.Resampling.NEAREST)
 
-                    red_mask = np.zeros_like(original_np)
-                    red_mask[:, :, 0] = mask_np
+                    # --- COLUMNA 2: MÁSCARA SEGMENTADA ---
+                    with col2:
+                        st.markdown("### Máscara Segmentada")
+                        # Creamos un fondo negro para que resalten los colores
+                        black_bg = Image.new("RGB", image.size, (0, 0, 0))
+                        black_bg.paste(mask_image, mask=mask_image)
+                        st.image(black_bg, use_container_width=True)
 
-                    overlay = (
-                        original_np * (1 - alpha)
-                        + red_mask * alpha
-                    ).astype(np.uint8)
+                    # --- COLUMNA 3: SUPERPOSICIÓN (OVERLAY) ---
+                    original_np = np.array(image.convert("RGB")).astype(np.float32)
+                    mask_np = np.array(mask_image).astype(np.float32)
 
-                    overlay_image = Image.fromarray(overlay)
+                    # Separar los canales de color (RGB) y el canal de transparencia (Alpha)
+                    mask_rgb = mask_np[:, :, :3]
+                    # Aplicamos tu slider (alpha) a la transparencia original de la API
+                    mask_alpha = (mask_np[:, :, 3] / 255.0) * alpha 
+
+                    # Mezclamos la radiografía original con los colores de la máscara
+                    overlay = np.zeros_like(original_np)
+                    for c in range(3): # Iteramos sobre R, G, B
+                        overlay[:, :, c] = original_np[:, :, c] * (1 - mask_alpha) + mask_rgb[:, :, c] * mask_alpha
+
+                    overlay_image = Image.fromarray(overlay.astype(np.uint8))
 
                     with col3:
                         st.markdown("### Superposición")
@@ -182,10 +186,12 @@ if uploaded_file is not None:
                     with m1:
                         st.metric("Inferencia", f"{elapsed}s")
                     with m2:
-                        area = np.sum(mask_np > 0)
+                        # Contamos píxeles donde hay color (donde el alpha > 0)
+                        area = np.sum(mask_np[:, :, 3] > 0)
                         st.metric("Píxeles", int(area))
                     with m3:
-                        coverage = round(area / (mask_np.shape[0] * mask_np.shape[1]) * 100, 2)
+                        total_pixels = mask_np.shape[0] * mask_np.shape[1]
+                        coverage = round((area / total_pixels) * 100, 2)
                         st.metric("Cobertura", f"{coverage}%")
 
                     # --- DESCARGA ---
