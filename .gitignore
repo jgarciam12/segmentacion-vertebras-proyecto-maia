@@ -1,9 +1,11 @@
+
 .venv/
 venv/
 env/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
 .idea/
 
 # Model weights
@@ -32,3 +34,7 @@ checkpoints_efficientnet/
 # OS
 .DS_Store
 Thumbs.db
+__pycache__/
+src/models/
+
+# Data
