@@ -1,17 +1,18 @@
-<<<<<<< HEAD
 .venv/
 venv/
 env/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-=======
-.idea
-data/images
-data/masks
-venv/
+.idea/
 
 # Model weights
 *.pth
-__pycache__/
->>>>>>> api-y-front
+
+# Claude
+.claude/
+
+# Data
+Scoliosis_Dataset/
+data/images/
+data/masks/
