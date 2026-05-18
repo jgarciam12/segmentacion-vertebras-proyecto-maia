@@ -2,6 +2,10 @@ import streamlit as st
 import requests
 from PIL import Image
 import io
+import os
+
+BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+API_URL = f"{BASE_URL}/predict"
 
 st.set_page_config(page_title="Segmentación de Vértebras", layout="wide")
 
@@ -10,8 +14,10 @@ st.write("Sube una imagen de rayos X o TAC para detectar las vértebras.")
 
 # Barra lateral para configuración
 st.sidebar.header("Configuración")
-api_url = st.sidebar.text_input("URL de la API", "http://127.0.0.1:8000/predict")
-
+api_url = st.sidebar.text_input(
+    "URL de la API",
+    API_URL
+)
 uploaded_file = st.file_uploader("Elige una imagen...", type=["png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
@@ -28,7 +34,14 @@ if uploaded_file is not None:
         with st.spinner('Procesando con la IA...'):
             try:
                 # Enviar imagen a la API
-                files = {"file": uploaded_file.getvalue()}
+                files = {
+                    "file": (
+                        uploaded_file.name,
+                        uploaded_file.getvalue(),
+                        uploaded_file.type
+                    )
+                }
+
                 response = requests.post(api_url, files=files)
                 
                 if response.status_code == 200:

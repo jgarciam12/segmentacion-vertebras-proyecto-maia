@@ -8,7 +8,6 @@ __pycache__/
 
 # Model weights
 *.pth
-!models/medsam_G_best_20260515_1500.pth
 
 # Claude
 .claude/
