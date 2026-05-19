@@ -21,3 +21,5 @@ src/models/
 MaIA_Scoliosis_Dataset/
 data/images/
 data/masks/
+notebooks/
+readme.md
