@@ -3,7 +3,8 @@ import os
 import numpy as np
 import cv2
 import torch
-from fastapi.responses import StreamingResponse
+import base64
+from fastapi.responses import JSONResponse
 from segment_anything import sam_model_registry, SamPredictor
 from ultralytics import YOLO
 
@@ -40,48 +41,52 @@ class Predictor:
         self.predictor = SamPredictor(self.sam)
         print("🚀 MedSAM ensamblado. ¡Pipeline Listo!")
 
-    def predict(self, image_bytes: bytes):
+    def predict(self, image_bytes: bytes, alpha: float = 0.5):
         nparr = np.frombuffer(image_bytes, np.uint8)
         img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         h_orig, w_orig = img_rgb.shape[:2]
 
         self.predictor.set_image(img_rgb)
-        # Lienzo base transparente
-        final_colored_mask = np.zeros((h_orig, w_orig, 4), dtype=np.uint8)
+        
+        # Ya no necesitamos generar capas extra, solo MedSAM puro para la fusión
+        img_medsam_pure = np.zeros((h_orig, w_orig, 3), dtype=np.uint8) 
 
-        # conf=0.35 -> Ignora detecciones con menos del 35% de seguridad
-        # iou=0.45 -> Si dos cajas se superponen más del 45%, elimina la más débil
         results = self.yolo(img_rgb, conf=0.35, iou=0.45, verbose=False)
         
-        # --- PRE-PROCESAMIENTO: Recolectar y Ordenar Detecciones de YOLO ---
         detecciones_validas = []
         if results[0].boxes:
             for box in results[0].boxes:
-                # Extraemos los datos de YOLO
                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                conf = float(box.conf[0].item()) # NUEVO: Capturar porcentaje de confianza
                 cls_id = int(box.cls[0].item())
                 label_name = str(self.yolo.names[cls_id])
                 
-                # Guardamos los datos necesarios en una lista
                 detecciones_validas.append({
                     'box': np.array([int(x1), int(y1), int(x2), int(y2)]),
-                    'y_top': int(y1), # Lo usaremos para ordenar de arriba a abajo
-                    'label': label_name
+                    'y_top': int(y1),
+                    'label': label_name,
+                    'confianza': conf
                 })
 
-        # SOLUCIÓN PROBLEMA 2 (Sobreposición): Ordenar estrictamente de ARRIBA a ABAJO.
+        # Ordenar de arriba a abajo
         detecciones_validas.sort(key=lambda d: d['y_top'])
 
-        # --- CAPA 1: DIBUJAR TODAS LAS MÁSCARAS DE SEGMENTACIÓN (MEDSAM) ---
-        print("🎨 Generando y dibujando máscaras de MedSAM...")
-        # Lista temporal para guardar info de textos para la siguiente capa
         info_textos = []
+        datos_tabla = [] # NUEVO: Lista para alimentar el Dataframe de Streamlit
 
+        # --- PROCESAMIENTO HÍBRIDO ---
         for det in detecciones_validas:
             input_box = det['box']
+            
+            # NUEVO: Llenar los datos de la fila para esta vértebra
+            datos_tabla.append({
+                "Vértebra": det['label'],
+                "Confianza (%)": round(det['confianza'] * 100, 2),
+                "Bounding Box": f"[{input_box[0]}, {input_box[1]}, {input_box[2]}, {input_box[3]}]"
+            })
 
-            # Generar máscara con MedSAM
+            # Segmentación con MedSAM
             masks, _, _ = self.predictor.predict(
                 point_coords=None, point_labels=None,
                 box=input_box[None, :],
@@ -89,46 +94,36 @@ class Predictor:
             )
 
             if masks[0].any():
-                # 1. Dibujar máscara en el lienzo final (CAPA COLORES)
-                color = list(np.random.choice(range(50, 256), size=3)) + [200]
+                color = list(np.random.choice(range(80, 256), size=3))
                 mask_res = cv2.resize(masks[0].astype(np.uint8), (w_orig, h_orig), interpolation=cv2.INTER_NEAREST)
-                final_colored_mask[mask_res > 0] = color
+                img_medsam_pure[mask_res > 0] = color
 
-                # 2. Guardar información de texto para después
-                text_x = input_box[0] # Coordenada x1
-                # Usamos y_top de YOLO para la posición del texto, con ajuste de seguridad
-                text_y = max(det['y_top'] - 5, 25) 
+                text_x = input_box[0]
+                text_y = max(det['y_top'] - 5, 25)
                 info_textos.append({'label': det['label'], 'x': int(text_x), 'y': int(text_y)})
 
-        # --- CAPA 2: DIBUJAR TODOS LOS TEXTOS ENCIMA DE TODO (CON ANTI-COLISIÓN) ---
-        print("🏷️ Dibujando etiquetas de YOLO con anti-colisión...")
+        # --- GENERAR LIENZO DE FUSIÓN ---
+        img_fusion = img_rgb.copy()
+        mask_active = np.any(img_medsam_pure > 0, axis=-1)
+        img_fusion[mask_active] = (img_rgb[mask_active] * (1 - alpha) + img_medsam_pure[mask_active] * alpha).astype(np.uint8)
+        
         font = cv2.FONT_HERSHEY_SIMPLEX
-        last_y_drawn = -50  # Memoria de dónde se dibujó el último texto
-
+        last_y_fusion = -50
         for info in info_textos:
-            text_x, text_y = info['x'], info['y']
-            label_name = info['label']
+            tx, ty = info['x'], info['y']
+            if ty < last_y_fusion + 28: ty = last_y_fusion + 28
+            cv2.putText(img_fusion, info['label'], (tx, ty), font, 0.8, (0, 0, 0), 4, cv2.LINE_AA)
+            cv2.putText(img_fusion, info['label'], (tx, ty), font, 0.8, (255, 255, 0), 2, cv2.LINE_AA)
+            last_y_fusion = ty
 
-            # ALGORITMO ANTI-COLISIÓN:
-            # Si la coordenada Y actual está a menos de 28 píxeles del texto anterior...
-            if text_y < last_y_drawn + 28:
-                # ...lo empujamos hacia abajo para que quede justo debajo
-                text_y = last_y_drawn + 28
+        def to_b64(img):
+            _, buffer = cv2.imencode('.png', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+            return base64.b64encode(buffer).decode('utf-8')
 
-            # Borde negro (outline) para contraste
-            cv2.putText(
-                img=final_colored_mask, text=label_name, org=(text_x, text_y),
-                fontFace=font, fontScale=0.8, color=(0, 0, 0, 255), thickness=4, lineType=cv2.LINE_AA
-            )
-            # Relleno amarillo (text body)
-            cv2.putText(
-                img=final_colored_mask, text=label_name, org=(text_x, text_y),
-                fontFace=font, fontScale=0.8, color=(255, 255, 0, 255), thickness=2, lineType=cv2.LINE_AA
-            )
-
-            # Actualizamos la memoria para el siguiente texto
-            last_y_drawn = text_y
-
-        print("✅ Segmentación híbrida completada de arriba a abajo.")
-        _, buffer = cv2.imencode('.png', cv2.cvtColor(final_colored_mask, cv2.COLOR_RGBA2BGRA))
-        return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/png")
+        print("✅ Inferencia completada y tabla extraída.")
+        # NUEVO: Devolvemos la imagen Y los datos de la tabla
+        return JSONResponse(content={
+            "fusion": to_b64(img_fusion),
+            "tabla": datos_tabla,
+            "total_vertebras": len(datos_tabla)
+        })
