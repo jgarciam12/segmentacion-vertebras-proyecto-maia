@@ -6,20 +6,35 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
-.idea
-data/images
-data/masks
-venv/
+.idea/
 
 # Model weights
 *.pth
-__pycache__/
-src/models/
-*.pt
+
+# Claude
+.claude/
 
 # Data
+Scoliosis_Dataset/
 MaIA_Scoliosis_Dataset/
 data/images/
 data/masks/
-notebooks/
-readme.md
+
+# Artifacts
+artifacts/
+
+# Training outputs
+checkpoints/
+checkpoints_efficientnet/
+
+# Torch / model files
+*.pt
+*.ckpt
+
+# OS
+.DS_Store
+Thumbs.db
+__pycache__/
+src/models/
+
+# Data
