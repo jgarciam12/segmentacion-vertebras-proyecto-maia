@@ -9,7 +9,7 @@ __pycache__/
 .idea/
 
 # Model weights
-#*.pth
+*.pth
 
 # Claude
 .claude/
@@ -27,7 +27,7 @@ checkpoints/
 checkpoints_efficientnet/
 
 # Torch / model files
-#*.pt
+*.pt
 *.ckpt
 
 # OS
@@ -37,3 +37,4 @@ __pycache__/
 
 
 # Data
+src/models/

@@ -1,4 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+import torch
+from functools import partial
+
+# --- PARCHE DE COMPATIBILIDAD ---
+# Forzamos a que torch.load use weights_only=False por defecto
+torch.load = partial(torch.load, weights_only=False)
+# --------------------------------
 from src.inference.predictor import Predictor
 
 app = FastAPI(title="API de Segmentación (MedSAM)")
