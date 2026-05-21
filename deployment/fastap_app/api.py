@@ -13,7 +13,7 @@ def health():
     return {"status": "healthy"}
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...), alpha: float = 0.5):
     if file.content_type not in ["image/png", "image/jpeg", "image/jpg"]:
         raise HTTPException(
             status_code=400,
@@ -21,4 +21,4 @@ async def predict(file: UploadFile = File(...)):
         )
 
     content = await file.read()
-    return predictor.predict(content)
+    return predictor.predict(content, alpha)

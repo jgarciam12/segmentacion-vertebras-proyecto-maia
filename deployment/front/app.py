@@ -95,7 +95,7 @@ if uploaded_file is not None:
             with st.spinner("Procesando radiografía con IA..."):
                 try:
                     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-                    response = requests.post(f"{api_url}?alpha={alpha}", files=files, timeout=60)
+                    response = requests.post(f"{api_url}?alpha={alpha}", files=files, timeout=300)
 
                     if response.status_code == 200:
                         data = response.json()
