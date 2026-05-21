@@ -1,0 +1,33 @@
+{
+  "dataset_name": "RadiographMetrics_Cobb_Essential",
+  "description": "Versión estructurada con los elementos necesarios para describir la curva escoliótica en pixeles y el ángulo de Cobb.",
+  "contents": {
+    "metricas_cobb_resumen.csv": "Tabla resumen por paciente con los puntos de inflexión superior e inferior, las pendientes de las rectas usadas para Cobb, el punto del ápice, el valor del ángulo de Cobb y las rutas a la curva en pixeles y al overlay de Cobb.",
+    "curvas_en_pixeles/": "Un archivo CSV por paciente con los puntos de la curva en pixeles. Cada fila representa un punto (x_px, y_px) de la curva.",
+    "overlays_cobb/": "Una imagen PNG por paciente con el sobrelape de la radiografía, la curva escoliótica y las rectas perpendiculares que describen el ángulo de Cobb."
+  },
+  "table_columns": {
+    "patient_id": "Identificador numérico del paciente.",
+    "punto_inflexion_superior_x_px": "Coordenada x, en pixeles, del punto de inflexión superior sobre la curva.",
+    "punto_inflexion_superior_y_px": "Coordenada y, en pixeles, del punto de inflexión superior sobre la curva.",
+    "punto_inflexion_inferior_x_px": "Coordenada x, en pixeles, del punto de inflexión inferior sobre la curva.",
+    "punto_inflexion_inferior_y_px": "Coordenada y, en pixeles, del punto de inflexión inferior sobre la curva.",
+    "pendiente_recta_superior_dxdy": "Pendiente de la recta superior usada para describir el ángulo de Cobb, expresada como dx/dy.",
+    "pendiente_recta_inferior_dxdy": "Pendiente de la recta inferior usada para describir el ángulo de Cobb, expresada como dx/dy.",
+    "punto_apice_x_px": "Coordenada x, en pixeles, del ápice principal de la curva.",
+    "punto_apice_y_px": "Coordenada y, en pixeles, del ápice principal de la curva.",
+    "angulo_cobb_deg": "Valor del ángulo de Cobb en grados.",
+    "curva_pixeles_csv": "Ruta relativa al archivo CSV que contiene todos los puntos de la curva en pixeles.",
+    "overlay_cobb_png": "Ruta relativa a la imagen PNG con la radiografía, la curva y las rectas perpendiculares de Cobb."
+  },
+  "curve_csv_columns": {
+    "x_px": "Coordenada x del punto de la curva en pixeles.",
+    "y_px": "Coordenada y del punto de la curva en pixeles."
+  },
+  "notes": {
+    "superior_vs_inferior": "El punto superior se define como el de menor coordenada y en la imagen. El punto inferior se define como el de mayor coordenada y.",
+    "slope_convention": "Las pendientes se conservan con la convención del código original: dx/dy.",
+    "overlay_content": "Cada overlay contiene la radiografía, la curva y las dos rectas perpendiculares empleadas para describir el ángulo de Cobb."
+  },
+  "patients_included": 179
+}
