@@ -1,3 +1,17 @@
+# Backend / API
 fastapi
+uvicorn[standard]
+python-multipart
+
+# Deep learning
 torch
-segmentation_models_pytorch
+torchvision
+
+# Models
+ultralytics
+
+# Data processing
+numpy
+opencv-python
+pillow
+albumentations

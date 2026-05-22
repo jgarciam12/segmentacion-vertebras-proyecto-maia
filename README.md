@@ -2,6 +2,11 @@
 
 Sistema de segmentación multiclase de vértebras en radiografías de columna vertebral. Combina un detector YOLOv8 con un segmentador MedSAM fine-tuneado para identificar y delinear individualmente las vértebras T1–T12 y L1–L5, con soporte para columnas normales y casos de escoliosis.
 
+- Diana Paola Rojas Castañeda
+- Jorge Ivan Eslava Guzmán
+- Patricio Romeo
+- Juan Sebastian Vallarino Camacho
+- Javier
 ---
 
 ## Arquitectura del sistema
@@ -67,11 +72,15 @@ El dataset **no está versionado en el repositorio** (incluido en `.gitignore`).
 
 ---
 
-## Requisitos
+## Requisitos del sistema
 
-- Python 3.11+
-- CUDA (opcional pero recomendado — la inferencia también corre en CPU)
-- Docker y Docker Compose (para despliegue contenedorizado)
+| Componente | Mínimo | Recomendado |
+|---|---|---|
+| Motor de contenedores | Docker Desktop (Win/Mac) o Docker Engine (Linux) | — |
+| RAM | 4 GB | 8 GB (para fluidez en inferencia) |
+| Conectividad | Acceso a internet para descarga inicial de imágenes Docker | — |
+| Python | 3.11+ (solo para ejecución local sin Docker) | — |
+| GPU / CUDA | Opcional | Recomendado para reducir latencia de inferencia |
 
 ### Dependencias principales
 
@@ -139,20 +148,47 @@ En la barra lateral, configurar el endpoint de la API como `http://localhost:800
 
 ---
 
-## Ejecución con Docker
+## Despliegue con Docker (recomendado)
+
+El método oficial de despliegue usa una red virtual Docker para la comunicación interna entre backend y frontend.
+
+**Paso 1 — Limpiar instancias previas** (evita conflictos de nombres y puertos):
 
 ```bash
-# Construir y levantar ambos servicios
-docker build -t maia-api -f deployment/fastap_app/Dockerfile .
-docker build -t maia-front -f deployment/front/Dockerfile deployment/front/
+docker rm -f api front
+```
 
-docker run -d -p 8000:8000 --name maia-api maia-api
-docker run -d -p 8501:8501 --name maia-front maia-front
+**Paso 2 — Crear la red virtual:**
+
+```bash
+docker network create maia-network
+```
+
+**Paso 3 — Construir las imágenes:**
+
+```bash
+# Backend (inferencia)
+docker build -t vertebra-api:latest -f deployment/fastap_api/Dockerfile .
+
+# Frontend (interfaz Streamlit)
+docker build -t maia-front:latest -f deployment/front/Dockerfile .
+```
+
+> Asegurarse de que el nombre de la carpeta sea `fastap_api` (no `fastap_app`).
+
+**Paso 4 — Lanzar los contenedores en la red compartida:**
+
+```bash
+# API en puerto 8000
+docker run -d --name api -p 8000:8000 --network maia-network vertebra-api:latest
+
+# Frontend en puerto 8501
+docker run -d --name front -p 8501:8501 --network maia-network maia-front:latest
 ```
 
 Acceder a la interfaz en `http://localhost:8501`.
 
-> **Nota:** si se quiere usar GPU dentro del contenedor, agregar `--gpus all` al `docker run` del backend y usar la imagen base con soporte CUDA.
+> Para usar GPU dentro del contenedor, agregar `--gpus all` al `docker run` del backend.
 
 ---
 
@@ -173,15 +209,69 @@ curl -X POST http://localhost:8000/predict \
 
 ---
 
-## Uso de la interfaz web
+## Guía de uso de la interfaz
 
-1. Abrir `http://localhost:8501` en el navegador.
-2. Subir una radiografía de columna en formato JPEG o PNG.
-3. El sistema procesa la imagen y muestra:
-   - Panel izquierdo: radiografía original.
-   - Panel derecho: radiografía con segmentación superpuesta.
-   - Tabla inferior: vértebras detectadas con etiqueta anatómica, confidence score y coordenadas del bounding box.
-4. El slider **Alpha** en la barra lateral controla la opacidad del overlay.
+Una vez desplegada, acceder a `http://localhost:8501`.
+
+---
+
+### Paso 1 — Configuración inicial
+
+Al abrir la aplicación se muestra la interfaz principal antes de cargar datos.
+
+![Interfaz inicial](docs/images/manual_paso1_interfaz_inicial.png)
+
+- **Panel de configuración (barra lateral izquierda):** verificar que la URL de la API apunte al contenedor de inferencia: `http://api:8000/predict`.
+- **Transparencia de superposición (Alpha):** se recomienda iniciar en `0.50` para un equilibrio óptimo entre la máscara de IA y la anatomía real.
+- **Información del sistema:** el panel inferior confirma el pipeline activo — detección con YOLOv8 Custom y segmentación con MedSAM ViT-B.
+
+---
+
+### Paso 2 — Carga de la radiografía
+
+Presionar el botón **"Upload"** para abrir el explorador de archivos.
+
+![Carga de radiografía](docs/images/manual_paso2_carga_radiografia.png)
+
+- **Formatos soportados:** `.jpg` y `.png`.
+- Una vez seleccionado el archivo, la imagen se carga en el panel central y se muestra su resolución de entrada (ej. `241 × 878 px`) para confirmar que el archivo se leyó correctamente.
+
+---
+
+### Paso 3 — Ejecución del análisis
+
+Presionar el botón **"Ejecutar Análisis"** para iniciar el pipeline.
+
+![Ejecutar análisis](docs/images/manual_paso3_ejecutar_analisis.png)
+
+El frontend se comunica con el backend y muestra un indicador de progreso mientras la IA procesa la radiografía.
+
+![Procesando](docs/images/manual_paso3_procesando.png)
+
+> La latencia estimada es de **5 a 8 segundos** en entornos CPU (sujeto a la maquina donde esté desplegado). Durante este tiempo el pipeline detecta cada vértebra con YOLOv8 y genera su segmentación precisa con MedSAM.
+
+---
+
+### Paso 4 — Resultados visuales
+
+Finalizado el análisis, la interfaz presenta una comparación lado a lado: radiografía original (izquierda) y radiografía segmentada (derecha).
+
+![Resultados visuales](docs/images/manual_paso4_resultados_visuales.png)
+
+Cada estructura ósea (T1 a L5) queda resaltada con un color distinto y etiquetada individualmente. Ajustar el slider de **Transparencia** en la barra lateral permite ver en tiempo real cómo la máscara se atenúa sobre la imagen original.
+
+---
+
+### Paso 5 — Tabla de resultados
+
+En la parte inferior se despliega el panel de resultados numéricos.
+
+![Tabla de resultados](docs/images/manual_paso5_tabla_resultados.png)
+
+- **Métricas globales:** total de vértebras detectadas y tiempo de procesamiento exacto.
+- **Desglose por vértebra:**
+  - **Confianza (%):** nivel de certeza del modelo en la identificación (ej. T1 con 90.11%).
+  - **Bounding Box:** coordenadas espaciales `[x, y, w, h]` del área detectada por YOLOv8 antes de ser procesada por MedSAM.
 
 ---
 
@@ -217,18 +307,27 @@ Ver [`preprocesamiento.md`](preprocesamiento.md) para la especificación complet
 
 Ver [`procesamiento.md`](procesamiento.md) para la especificación completa.
 
-El entrenamiento de los modelos Mask R-CNN sigue una estrategia de **descongelamiento progresivo** del encoder con **learning rates diferenciales por bloque**, usando una loss combinada `Dice + Focal` para manejar el desbalance de clases. Los notebooks de `notebooks/` contienen los runs de entrenamiento completos.
+El entrenamiento de los modelos sigue una estrategia de **descongelamiento progresivo** del encoder con **learning rates diferenciales por bloque**, usando una loss combinada `Dice + Focal` para manejar el desbalance de clases. Los notebooks de `notebooks/` contienen los runs de entrenamiento completos.
 
 ---
 
-## Hardware de referencia
+## Resolución de problemas (Troubleshooting)
 
-El proyecto fue desarrollado y entrenado con:
+| Problema | Causa probable | Solución |
+|---|---|---|
+| Error de conexión | El contenedor `api` no está iniciado o no está en la red | Ejecutar `docker ps` y verificar que ambos contenedores estén en `maia-network` |
+| Lentitud extrema | Recursos de RAM limitados en Docker Desktop | Aumentar la asignación de RAM en la configuración de Docker Desktop (>4 GB) |
+| Imagen no procesada | Formato incompatible o archivo corrupto | Usar formatos estándar `.png` o `.jpg` |
+
+---
+
+## Hardware de referencia (entrenamiento)
 
 | Componente | Especificación |
 |---|---|
-| GPU | NVIDIA GeForce GTX 1650 (4GB VRAM) |
-| CPU | AMD Ryzen 5 5600X @ 3.70GHz |
-| RAM | 16GB |
+| GPU | NVIDIA GeForce GTX 1650 (4 GB VRAM) |
+| CPU | AMD Ryzen 5 5600X @ 3.70 GHz |
+| RAM | 16 GB |
 
-La inferencia en CPU es funcional pero significativamente más lenta. Para entrenamiento se recomienda mínimo 8GB VRAM.
+La inferencia en CPU es funcional pero significativamente más lenta. Para reentrenar se recomienda mínimo 8 GB VRAM.
+
