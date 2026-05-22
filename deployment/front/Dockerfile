@@ -18,3 +18,6 @@ EXPOSE 8501
 
 # Comando corregido para que encuentre el ejecutable
 CMD ["python", "-m", "streamlit", "run", "deployment/front/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+# docker build -t maia-front:latest -f deployment/front/Dockerfile .
+# docker run -p 8501:8501 -e API_URL="http://host.docker.internal:8000/predict" maia-front

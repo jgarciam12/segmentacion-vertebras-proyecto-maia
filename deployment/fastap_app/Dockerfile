@@ -30,8 +30,8 @@ RUN pip install --upgrade pip
 
 # Instalar PyTorch CPU ONLY
 RUN pip install --no-cache-dir \
-    torch==2.7.0+cpu \
-    torchvision==0.22.0+cpu \
+    torch \
+    torchvision \
     --index-url https://download.pytorch.org/whl/cpu
 
 # Instalar los requerimientos del proyecto (incluirá segment-anything de Github)
@@ -48,3 +48,6 @@ EXPOSE 8000
 
 # 6. Ejecutar desde /opt para que las rutas relativas coincidan
 CMD ["uvicorn", "deployment.fastap_app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# docker build -t vertebra-api:latest -f deployment/fastap_app/Dockerfile .
+# docker run -p 8000:8000 -it -e PORT=8000 vertebra-api
