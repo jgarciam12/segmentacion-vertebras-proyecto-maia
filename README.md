@@ -6,7 +6,7 @@ Sistema de segmentación multiclase de vértebras en radiografías de columna ve
 - Jorge Ivan Eslava Guzmán
 - Patricio Romeo
 - Juan Sebastian Vallarino Camacho
-- Javier
+- Javier Camilo Garcia Matos
 ---
 
 ## Arquitectura del sistema
@@ -219,7 +219,7 @@ Una vez desplegada, acceder a `http://localhost:8501`.
 
 Al abrir la aplicación se muestra la interfaz principal antes de cargar datos.
 
-![Interfaz inicial](docs/images/manual_paso1_interfaz_inicial.png)
+![Interfaz inicial](docs/images/manual_paso1_interfaz_inicial.jpeg)
 
 - **Panel de configuración (barra lateral izquierda):** verificar que la URL de la API apunte al contenedor de inferencia: `http://api:8000/predict`.
 - **Transparencia de superposición (Alpha):** se recomienda iniciar en `0.50` para un equilibrio óptimo entre la máscara de IA y la anatomía real.
@@ -256,7 +256,7 @@ El frontend se comunica con el backend y muestra un indicador de progreso mientr
 
 Finalizado el análisis, la interfaz presenta una comparación lado a lado: radiografía original (izquierda) y radiografía segmentada (derecha).
 
-![Resultados visuales](docs/images/manual_paso4_resultados_visuales.png)
+![Resultados visuales](docs/images/manual_paso4_resultados_visuales.jpeg)
 
 Cada estructura ósea (T1 a L5) queda resaltada con un color distinto y etiquetada individualmente. Ajustar el slider de **Transparencia** en la barra lateral permite ver en tiempo real cómo la máscara se atenúa sobre la imagen original.
 
@@ -266,7 +266,7 @@ Cada estructura ósea (T1 a L5) queda resaltada con un color distinto y etiqueta
 
 En la parte inferior se despliega el panel de resultados numéricos.
 
-![Tabla de resultados](docs/images/manual_paso5_tabla_resultados.png)
+![Tabla de resultados](docs/images/manual_paso5_tabla_resultados.jpeg)
 
 - **Métricas globales:** total de vértebras detectadas y tiempo de procesamiento exacto.
 - **Desglose por vértebra:**
